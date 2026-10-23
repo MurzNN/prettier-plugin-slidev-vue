@@ -1,0 +1,50 @@
+{
+  "name": "prettier-plugin-slidev-vue",
+  "version": "0.1.0",
+  "description": "Format Slidev Markdown and embedded Vue components, with Vue attribute and UnoCSS class sorting.",
+  "license": "MIT",
+  "author": "Alexey Korepov",
+  "homepage": "https://github.com/MurzNN/prettier-plugin-slidev-vue#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MurzNN/prettier-plugin-slidev-vue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MurzNN/prettier-plugin-slidev-vue/issues"
+  },
+  "type": "module",
+  "exports": "./index.js",
+  "files": [
+    "index.js",
+    "uno.config.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "prettier",
+    "prettier-plugin",
+    "slidev",
+    "vue",
+    "unocss"
+  ],
+  "peerDependencies": {
+    "prettier": "^3.9.10"
+  },
+  "dependencies": {
+    "@unocss/eslint-config": "^66.11.0",
+    "@unocss/preset-wind3": "^66.11.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "prettier-plugin-slidev": "^1.0.5",
+    "vue-eslint-parser": "^10.4.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.10"
+  }
+}
