@@ -4,16 +4,32 @@ import { test } from 'node:test'
 import { format } from 'prettier'
 import plugin from '../index.js'
 import { fileURLToPath } from 'node:url'
+import { createMarkdownExit } from 'markdown-exit'
+import { componentPlugin } from '@mdit-vue/plugin-component'
+import comark from '@comark/markdown-it'
 
 const options = { parser: 'slidev', plugins: [plugin], filepath: 'slides.md' }
 
+async function renderSlidev(markdown) {
+  const md = createMarkdownExit({ html: true, linkify: true })
+  md.use(componentPlugin)
+  md.use(comark)
+  return md.renderAsync(markdown)
+}
+
+function assertSlidevRawHtml(html, tag = 'span') {
+  assert.ok(!html.includes('="true"'), html)
+  assert.ok(!html.includes(`&lt;${tag}`), html)
+  assert.ok(!html.includes('<blockquote>'), html)
+}
+
 test('formats multiline Vue attributes without a blank line before the closing bracket', async () => {
-  const expected = '<button\n  class="flex rounded-lg bg-blue-500 p-4 text-white"\n  disabled="{loading}"\n  type="submit"\n>'
-  for (const tag of [
-    expected,
-    '<button\nclass="flex rounded-lg bg-blue-500 p-4 text-white"\ndisabled="{loading}"\ntype="submit"\n\n>',
+  const expected = '<div>\n  <button\n    class="flex rounded-lg bg-blue-500 p-4 text-white"\n    disabled="{loading}"\n    type="submit"\n  >'
+  for (const inner of [
+    '<button\n  class="flex rounded-lg bg-blue-500 p-4 text-white"\n  disabled="{loading}"\n  type="submit"\n>\nSubmit\n</button>',
+    '<button\nclass="flex rounded-lg bg-blue-500 p-4 text-white"\ndisabled="{loading}"\ntype="submit"\n\n>\nSubmit\n</button>',
   ]) {
-    const result = await format(`${tag}\nSubmit\n</button>\n`, options)
+    const result = await format(`<div>\n${inner}\n</div>\n`, options)
     assert.ok(result.startsWith(expected), result)
     assert.equal(await format(result, options), result)
   }
@@ -40,12 +56,50 @@ test('formats Markdown and frontmatter while retaining Vue directive syntax', as
 })
 
 test('does not extract Vue tags inside fenced or inline code', async () => {
-  const source = '# Code\n\n```text\n<Foo class="example">\n```\n\n`<Bar>`\n\n<button\n  type="submit"\n  disabled="{loading}"\n>\nSubmit\n</button>\n'
+  const source = '# Code\n\n```text\n<Foo class="example">\n```\n\n`<Bar>`\n\n<div>\n<button\n  type="submit"\n  disabled="{loading}"\n>\nSubmit\n</button>\n</div>\n'
   const result = await format(source, options)
   assert.match(result, /```text\n<Foo class="example">\n```/)
   assert.match(result, /`<Bar>`/)
   assert.match(result, /<button type="submit" disabled="\{loading\}">/)
   assert.equal(await format(result, options), result)
+})
+
+test('rewrites empty multiline inline tags to self-closing for Slidev Markdown', async () => {
+  const source = `<span v-if="$clicks === 7" @vue:mounted="$cursor.moveTo('#mf1-msg4 .btn-offer'); $timeout(() => { $cursor.click(); }, 1000);"></span>\n`
+  const result = await format(source, options)
+  assert.match(result, /@vue:mounted="/)
+  assert.match(result, /\/>\s*$/)
+  assert.doesNotMatch(result, /><\/span>/)
+  assert.equal(await format(result, options), result)
+  assertSlidevRawHtml(await renderSlidev(result))
+})
+
+test('keeps empty block tags and nested empty spans unchanged', async () => {
+  const source = `<div v-if="$clicks === 7" @vue:mounted="$timeout(() => { $cursor.click(); }, 1000);"></div>\n`
+  const result = await format(source, options)
+  assert.match(result, /<\/div>\s*$/)
+  assert.equal(await format(result, options), result)
+  assertSlidevRawHtml(await renderSlidev(result), 'div')
+
+  const nested = await format(
+    `<div class="p-4">\n  <span v-if="$clicks === 9" @vue:mounted="$timeout(() => { $cursor.click(); }, 1000);"></span>\n</div>\n`,
+    options,
+  )
+  assert.match(nested, /<span[\s\S]*><\/span>/)
+  assert.equal(await format(nested, options), nested)
+  assertSlidevRawHtml(await renderSlidev(nested))
+})
+
+test('rejects top-level multiline inline tags that still have content', async () => {
+  const source = `<span
+  v-click="1"
+  class="very-long-class-name-that-forces-wrapping foo bar baz qux"
+>in the messenger</span>
+`
+  await assert.rejects(
+    () => format(source, { ...options, printWidth: 40 }),
+    /Slidev Markdown cannot keep a multiline <span>/,
+  )
 })
 
 test('Prettier alone sorts Vue attributes and UnoCSS classes', async () => {

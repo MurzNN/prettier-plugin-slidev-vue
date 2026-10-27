@@ -78,15 +78,26 @@ not globally alphabetical order).
 - Masks fenced and inline code during Vue extraction so example tags do not
 consume actual components. Prettier may still format fenced code normally.
 
-For example, an opening tag is kept properly indented without a blank line
-before `>`:
+For example, an opening tag nested under a block root is kept properly indented
+without a blank line before `>`:
 
 ```html
-<button
-  class="flex rounded-lg bg-blue-500 p-4 text-white"
-  disabled="{loading}"
-  type="submit"
->
+<div>
+  <button
+    class="flex rounded-lg bg-blue-500 p-4 text-white"
+    disabled="{loading}"
+    type="submit"
+  >
+```
+
+Empty top-level inline hosts used for Slidev click scripts are rewritten to
+self-closing form so multiline attributes stay raw HTML at runtime:
+
+```html
+<span
+  v-if="$clicks === 7"
+  @vue:mounted="$timeout(() => { $cursor.click(); }, 1000);"
+/>
 ```
 
 ## UnoCSS configuration
@@ -124,6 +135,34 @@ The entry point is [index.js](./index.js):
 
 The ESLint `Linter` is reused across blocks. ESLint is an internal implementation
 detail, not a separate formatting pass over the Markdown file.
+
+## Slidev-safe inline HTML
+
+Slidev's Markdown pipeline (via `@mdit-vue/plugin-component`) keeps multiline
+**block** tags and custom Vue components as raw HTML, but not CommonMark
+**inline** tags such as `span`, `button`, or `a`. A formatted empty host like:
+
+```html
+<span
+  v-if="$clicks === 7"
+  @vue:mounted="$timeout(() => { $cursor.click(); }, 1000);"
+></span>
+```
+
+is then split by Markdown: a line starting with `>` becomes a blockquote, and
+Comark can turn the `{ ... }` in the arrow function into bogus attributes.
+
+This plugin therefore:
+
+- Rewrites **empty** top-level inline HTML tags to self-closing (`/>`), which
+  Slidev still treats as raw HTML after multiline formatting.
+- Fails formatting when a top-level inline HTML tag has real content and a
+  multiline opening tag (Prettier otherwise swallows embed errors, so the
+  plugin rethrows during print). Nest it under a block tag (`div`), keep the
+  opening tag on one line, or use a Vue component / block HTML tag instead.
+
+Nested inline tags inside an extracted block root are left as Prettier emits
+them; the parent block already protects them at runtime.
 
 ## Limitations
 

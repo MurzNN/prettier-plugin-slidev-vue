@@ -16,9 +16,98 @@ const printer = slidev.printers[astFormat]
 const defaultUnoConfig = fileURLToPath(new URL('./uno.config.js', import.meta.url))
 
 /**
+ * CommonMark / mdit-vue inline HTML tags. Multiline top-level tags from this
+ * set are not kept as raw HTML by Slidev's Markdown pipeline, so a line that
+ * starts with `>` becomes a blockquote and Comark can rewrite `{ ... }` in
+ * attribute values. Custom Vue components and block tags are unaffected.
+ *
+ * Mirrors `@mdit-vue/plugin-component`'s force-inline list (TAGS_INLINE minus
+ * Vue reserved tags such as `template` and `slot`).
+ */
+const INLINE_HTML_TAGS = new Set([
+  'a', 'abbr', 'acronym', 'audio', 'b', 'bdi', 'bdo', 'big', 'br', 'button',
+  'canvas', 'cite', 'code', 'data', 'datalist', 'del', 'dfn', 'em', 'embed',
+  'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'map', 'mark', 'meter',
+  'noscript', 'object', 'output', 'picture', 'progress', 'q', 'ruby', 's',
+  'samp', 'script', 'select', 'small', 'span', 'strong', 'sub', 'sup', 'svg',
+  'textarea', 'time', 'u', 'tt', 'var', 'video', 'wbr',
+])
+
+/**
+ * Parse a formatted Vue fragment as a single template root.
+ *
+ * @param {string} content Formatted Vue/HTML fragment.
+ * @returns {import('vue-eslint-parser').AST.VElement | null}
+ */
+function parseRootElement(content) {
+  const { ast } = vueParser.parseForESLint(`${prefix}${content}${suffix}`, {
+    filePath: 'slide.vue',
+    ecmaVersion: 'latest',
+    sourceType: 'module',
+  })
+  const elements = ast.templateBody.children.filter((node) => node.type === 'VElement')
+  return elements.length === 1 ? elements[0] : null
+}
+
+/**
+ * True when the element has no meaningful children (empty script-host tags).
+ *
+ * @param {import('vue-eslint-parser').AST.VElement} element
+ */
+function isEmptyElement(element) {
+  return !element.children.some((child) => {
+    if (child.type === 'VText') return Boolean(child.value.trim())
+    if (child.type === 'VElement') return true
+    return false
+  })
+}
+
+/**
+ * Make empty top-level inline HTML tags self-closing, and reject multiline
+ * inline tags that still have content. Both shapes break under Slidev Markdown.
+ *
+ * @param {string} content Formatted Vue block restored into the slide body.
+ * @returns {string}
+ */
+function normalizeSlidevRoot(content) {
+  const root = parseRootElement(content)
+  if (!root) return content
+
+  const tag = root.rawName.toLowerCase()
+  if (!INLINE_HTML_TAGS.has(tag)) return content
+
+  const openStart = root.startTag.range[0] - prefix.length
+  const openEnd = root.startTag.range[1] - prefix.length
+  const openTag = content.slice(openStart, openEnd)
+  const multilineOpen = /[\r\n]/.test(openTag)
+
+  if (isEmptyElement(root)) {
+    if (openTag.endsWith('/>')) return openTag.trimEnd()
+    if (!openTag.endsWith('>')) return content
+    return `${openTag.slice(0, -1)}/>`.trimEnd()
+  }
+
+  if (multilineOpen) {
+    throw new Error(
+      `Slidev Markdown cannot keep a multiline <${root.rawName}> as raw HTML. `
+      + 'Keep the opening tag on one line, nest it under a block tag (div), '
+      + 'or use a Vue component / block HTML tag instead.',
+    )
+  }
+
+  return content
+}
+
+/** Prettier swallows embed errors unless PRETTIER_DEBUG is set; rethrow from print. */
+const formatError = new WeakMap()
+
+/**
  * Sort and format Vue blocks independently of Markdown, then restore them.
  * Markdown's parser otherwise treats a standalone `>` as a blockquote and
  * strips the indentation from multiline opening tags.
+ *
+ * Empty top-level inline HTML tags (span, button, …) are rewritten as
+ * self-closing so Slidev still treats them as raw HTML after format-on-save.
  *
  * @param {string} source One slide's body, excluding frontmatter.
  * @param {import('prettier').ParserOptions & { slidevVueUnoConfig?: string }} options
@@ -90,7 +179,7 @@ async function formatBody(source, options) {
     const content = lines.slice(1, -1)
       .map((line) => line.startsWith(indent) ? line.slice(indent.length) : line)
       .join(lineEnding)
-    blocks.push({ marker, content: content.trimEnd() })
+    blocks.push({ marker, content: normalizeSlidevRoot(content.trimEnd()) })
     protectedSource = protectedSource.slice(0, start) + marker + protectedSource.slice(end)
   }
 
@@ -118,14 +207,26 @@ const plugin = {
     ...slidev.printers,
     [astFormat]: {
       ...printer,
+      print(path, options, ...args) {
+        const error = formatError.get(options)
+        if (error) throw error
+        return printer.print(path, options, ...args)
+      },
       embed(path, options) {
         // Keep Slidev's YAML, notes, and separators; intercept only slide bodies.
         const embed = printer.embed(path, options)
         if (!embed) return embed
         return (textToDoc, ...args) => embed(async (text, embeddedOptions) => {
           if (embeddedOptions.parser !== 'markdown') return textToDoc(text, embeddedOptions)
-          const formatted = await formatBody(text, options)
-          return doc.builders.join(doc.builders.hardline, formatted.trimEnd().split('\n'))
+          try {
+            const formatted = await formatBody(text, options)
+            return doc.builders.join(doc.builders.hardline, formatted.trimEnd().split('\n'))
+          }
+          catch (error) {
+            // Embed failures are swallowed by Prettier; fail the print pass instead.
+            formatError.set(options, error)
+            throw error
+          }
         }, ...args)
       },
     },

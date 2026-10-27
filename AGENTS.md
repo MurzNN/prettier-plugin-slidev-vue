@@ -17,6 +17,14 @@ and limitations.
   formatted by Prettier's Vue parser, and temporarily protected while Markdown
   is formatted. Preserve source offsets when masking code examples or changing
   extraction; fenced and inline code must not be treated as live Vue markup.
+- After Vue formatting, `normalizeSlidevRoot` rewrites empty top-level CommonMark
+  inline HTML tags to self-closing form and rejects multiline inline tags that
+  still have content. Keep that list aligned with `@mdit-vue/plugin-component`'s
+  force-inline tags. Cover both behaviors with format tests that also render
+  through `markdown-exit` + `@mdit-vue/plugin-component` + `@comark/markdown-it`.
+  Rejection errors must be stored on the Prettier options object and rethrown
+  from `print`, because Prettier swallows `embed` failures unless
+  `PRETTIER_DEBUG` is set.
 - The default UnoCSS preset is in [uno.config.js](./uno.config.js). Tests use a
   separate empty-preset config at [test/fixtures/uno.config.js](./test/fixtures/uno.config.js).
   Custom config paths are resolved relative to the consumer's current working
@@ -31,7 +39,9 @@ and limitations.
   lint script configured.
 - Add or update tests in [test/format.test.mjs](./test/format.test.mjs) for
   formatting behavior. Preserve idempotence: formatting already-formatted
-  input should produce the same output.
+  input should produce the same output. Prefer nesting multiline inline HTML
+  (`span`, `button`, …) under a block tag in fixtures so they remain valid
+  Slidev Markdown.
 
 ## Change Guidelines
 
