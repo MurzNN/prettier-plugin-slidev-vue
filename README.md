@@ -81,7 +81,8 @@ formatting and sorting; no ESLint extension or wrapper command is required.
 
 - Keeps Slidev frontmatter, slide separators, and presenter-note handling.
 - Formats surrounding Markdown through Prettier's Markdown parser.
-- Formats extracted HTML/Vue blocks through Prettier's Vue parser.
+- Formats extracted HTML/Vue blocks through Prettier's Vue parser, including
+  indentation for nested component trees.
 - Sorts component attributes using `vue/attributes-order` (Vue's grouped order,
   not globally alphabetical order).
 - Sorts UnoCSS classes and attributify utilities using UnoCSS's ESLint rules.
@@ -147,6 +148,13 @@ detail, not a separate formatting pass over the Markdown file.
   with this plugin alone.
 - The implementation depends on the Slidev plugin's parser/printer interface;
   rerun the tests when upgrading Prettier or Slidev dependencies.
+
+## Interactive example
+
+Run `pnpm example` and open <http://127.0.0.1:4173> to try the formatter in a
+browser. The page loads its initial source from
+[example/example.md](./example/example.md); the formatted
+output is covered by the same expected fixture in the test suite.
 
 ## Development
 

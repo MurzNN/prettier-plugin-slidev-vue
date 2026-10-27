@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slidev + Vue Formatter Example</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        color: #172033;
+        background: #f3f6fb;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+      }
+
+      main {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.7rem, 4vw, 2.4rem);
+      }
+
+      .intro {
+        margin: 0 0 28px;
+        color: #526078;
+      }
+
+      .editors {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 700;
+      }
+
+      textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 520px;
+        padding: 16px;
+        resize: vertical;
+        border: 1px solid #d5ddec;
+        border-radius: 10px;
+        background: #fff;
+        color: #172033;
+        font: 14px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+        tab-size: 2;
+      }
+
+      textarea:focus {
+        outline: 2px solid #607cf5;
+        outline-offset: 2px;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 18px 0;
+      }
+
+      button {
+        padding: 10px 18px;
+        border: 0;
+        border-radius: 8px;
+        background: #405fe5;
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+
+      #status {
+        color: #526078;
+      }
+
+      #status[data-error="true"] {
+        color: #b42318;
+      }
+
+      @media (max-width: 760px) {
+        main {
+          padding: 28px 16px;
+        }
+
+        .editors {
+          grid-template-columns: 1fr;
+        }
+
+        textarea {
+          min-height: 360px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Slidev + Vue Formatter</h1>
+      <p class="intro">
+        Edit the mixed Markdown and Vue example, then format it with the plugin.
+      </p>
+
+      <div class="editors">
+        <section>
+          <label for="source">Source Markdown</label>
+          <textarea id="source" spellcheck="false" aria-describedby="status"></textarea>
+        </section>
+        <section>
+          <label for="result">Formatted result</label>
+          <textarea id="result" readonly spellcheck="false"></textarea>
+        </section>
+      </div>
+
+      <div class="actions">
+        <button id="format" type="button" disabled>Format</button>
+        <span id="status" role="status" aria-live="polite">Loading example…</span>
+      </div>
+    </main>
+
+    <script type="module">
+      const source = document.querySelector('#source')
+      const result = document.querySelector('#result')
+      const formatButton = document.querySelector('#format')
+      const status = document.querySelector('#status')
+
+      function setStatus(message, isError = false) {
+        status.textContent = message
+        status.dataset.error = String(isError)
+      }
+
+      async function loadExample() {
+        const response = await fetch('/api/example')
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Could not load example.')
+        source.value = data.source
+        formatButton.disabled = false
+        setStatus('Ready to format.')
+      }
+
+      formatButton.addEventListener('click', async () => {
+        formatButton.disabled = true
+        setStatus('Formatting…')
+        try {
+          const response = await fetch('/api/format', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: source.value }),
+          })
+          const data = await response.json()
+          if (!response.ok) throw new Error(data.error || 'Formatting failed.')
+          result.value = data.formatted
+          setStatus('Formatted successfully.')
+        } catch (error) {
+          setStatus(error.message, true)
+        } finally {
+          formatButton.disabled = false
+        }
+      })
+
+      loadExample().catch((error) => setStatus(error.message, true))
+    </script>
+  </body>
+</html>

@@ -18,13 +18,15 @@
     "index.js",
     "uno.config.js",
     "README.md",
+    "example",
     "LICENSE"
   ],
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "example": "node example/server.mjs"
   },
   "keywords": [
     "prettier",

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
 import { format } from 'prettier'
 import plugin from '../index.js'
@@ -16,6 +17,15 @@ test('formats multiline Vue attributes without a blank line before the closing b
     assert.ok(result.startsWith(expected), result)
     assert.equal(await format(result, options), result)
   }
+})
+
+test('indents nested Vue elements while keeping the extracted root unindented', async () => {
+  const source = '<section>\n<h2>Title</h2>\n<div>\n<p>Body</p>\n</div>\n</section>\n'
+  const result = await format(source, options)
+  assert.ok(result.startsWith(
+    '<section>\n  <h2>Title</h2>\n  <div>\n    <p>Body</p>\n  </div>\n</section>',
+  ), result)
+  assert.equal(await format(result, options), result)
 })
 
 test('formats Markdown and frontmatter while retaining Vue directive syntax', async () => {
@@ -63,4 +73,17 @@ test('uses an explicitly configured UnoCSS config instead of the bundled preset'
   assert.match(result, /class="text-white p-4 absolute"/)
   const defaultResult = await format(source, options)
   assert.match(defaultResult, /class="absolute p-4 text-white"/)
+})
+test('formats the mixed Slidev and Vue example from its source file', async () => {
+  const source = await readFile(
+    new URL('../example/example.md', import.meta.url),
+    'utf8',
+  )
+  const expected = await readFile(
+    new URL('../example/example.formatted.md', import.meta.url),
+    'utf8',
+  )
+  const result = await format(source, options)
+  assert.equal(result, expected)
+  assert.equal(await format(result, options), expected)
 })

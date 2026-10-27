@@ -77,10 +77,19 @@ async function formatBody(source, options) {
     if (sorted.messages.length) {
       throw new Error(sorted.messages.map((message) => message.message).join('\n'))
     }
-    const content = await format(sorted.output.slice(prefix.length, -suffix.length), {
+    const formatted = await format(sorted.output, {
       ...options,
       parser: 'vue',
     })
+    const lineEnding = formatted.match(/\r\n?|\n/)?.[0] ?? '\n'
+    const lines = formatted.trimEnd().split(/\r\n?|\n/)
+    if (lines[0] !== '<template>' || lines.at(-1) !== '</template>') {
+      throw new Error('Prettier did not preserve the temporary Vue template wrapper')
+    }
+    const indent = options.useTabs ? '\t' : ' '.repeat(options.tabWidth ?? 2)
+    const content = lines.slice(1, -1)
+      .map((line) => line.startsWith(indent) ? line.slice(indent.length) : line)
+      .join(lineEnding)
     blocks.push({ marker, content: content.trimEnd() })
     protectedSource = protectedSource.slice(0, start) + marker + protectedSource.slice(end)
   }
