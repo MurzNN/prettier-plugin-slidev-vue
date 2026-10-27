@@ -76,11 +76,11 @@ test('uses an explicitly configured UnoCSS config instead of the bundled preset'
 })
 test('formats the mixed Slidev and Vue example from its source file', async () => {
   const source = await readFile(
-    new URL('../example/example.md', import.meta.url),
+    new URL('../playground/example.md', import.meta.url),
     'utf8',
   )
   const expected = await readFile(
-    new URL('../example/example.formatted.md', import.meta.url),
+    new URL('../playground/example.formatted.md', import.meta.url),
     'utf8',
   )
   const result = await format(source, options)

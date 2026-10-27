@@ -149,12 +149,12 @@ detail, not a separate formatting pass over the Markdown file.
 - The implementation depends on the Slidev plugin's parser/printer interface;
   rerun the tests when upgrading Prettier or Slidev dependencies.
 
-## Interactive example
+## Playground
 
-Run `pnpm example` and open <http://127.0.0.1:4173> to try the formatter in a
-browser. The page loads its initial source from
-[example/example.md](./example/example.md); the formatted
-output is covered by the same expected fixture in the test suite.
+Run `pnpm playground` to try the formatter at <http://127.0.0.1:3000>. The
+playground calls the actual formatter through a local Node.js server. Its
+source sample is [playground/example.md](./playground/example.md);
+the formatted output is covered by the same fixture in the test suite.
 
 ## Development
 

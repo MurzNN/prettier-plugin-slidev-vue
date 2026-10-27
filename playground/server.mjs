@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { format } from 'prettier'
 import plugin from '../index.js'
 
-const port = Number(process.env.PORT ?? 4173)
+const port = Number(process.env.PORT ?? 3000)
 const options = { parser: 'slidev', plugins: [plugin], filepath: 'slides.md' }
 const exampleUrl = new URL('./example.md', import.meta.url)
 const pageUrl = new URL('./index.html', import.meta.url)
@@ -63,5 +63,5 @@ async function readRequestBody(request) {
 }
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Example page: http://127.0.0.1:${port}`)
+  console.log(`Playground: http://127.0.0.1:${port}`)
 })
