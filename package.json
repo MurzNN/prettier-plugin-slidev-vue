@@ -18,15 +18,28 @@
     "index.js",
     "uno.config.js",
     "README.md",
-    "playground",
     "LICENSE"
   ],
   "engines": {
     "node": ">=24"
   },
+  "packageManager": "pnpm@11.28.6",
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "playground": "node playground/server.mjs"
+    "playground": "node playground/server.mjs",
+    "release": "release-it"
+  },
+  "release-it": {
+    "git": {
+      "requireCleanWorkingDir": true,
+      "tagName": "v${version}"
+    },
+    "github": {
+      "release": true
+    },
+    "npm": {
+      "publish": false
+    }
   },
   "keywords": [
     "prettier",
@@ -47,6 +60,7 @@
     "vue-eslint-parser": "^10.4.1"
   },
   "devDependencies": {
-    "prettier": "^3.9.10"
+    "prettier": "^3.9.10",
+    "release-it": "^21.1.1"
   }
 }

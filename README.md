@@ -147,6 +147,19 @@ npm pack --dry-run
 Tests cover multiline attributes, slide frontmatter, Vue directives, sorting,
 code-example isolation, nested components, and stable repeated formatting.
 
+## Releasing
+
+Run `pnpm release` from a clean checkout to select the next version, create and
+push a `vX.Y.Z` tag, and publish a GitHub Release. The command needs permission
+to push to the repository and a `GITHUB_TOKEN` with permission to create
+releases.
+
+Publishing a GitHub Release triggers
+[`.github/workflows/publish.yml`](./.github/workflows/publish.yml), which
+publishes that tag's package version to npm. Configure the package on npm with
+a GitHub Actions trusted publisher for repository `MurzNN/prettier-plugin-slidev-vue`
+and workflow `publish.yml`; no long-lived npm token is needed.
+
 ## License
 
 [MIT](./LICENSE) © 2026 Alexey Korepov.
