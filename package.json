@@ -18,6 +18,7 @@
     "index.js",
     "uno.config.js",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
@@ -32,13 +33,22 @@
   "release-it": {
     "git": {
       "requireCleanWorkingDir": true,
+      "commitMessage": "Release ${version}",
       "tagName": "v${version}"
     },
     "github": {
-      "release": true
+      "release": true,
+      "releaseName": "Release ${version}"
     },
     "npm": {
       "publish": false
+    },
+    "plugins": {
+      "@release-it/keep-a-changelog": {
+        "filename": "CHANGELOG.md",
+        "addUnreleased": true,
+        "strictLatest": true
+      }
     }
   },
   "keywords": [
@@ -62,6 +72,7 @@
   "devDependencies": {
     "@comark/markdown-it": "^0.3.4",
     "@mdit-vue/plugin-component": "^3.0.2",
+    "@release-it/keep-a-changelog": "^8.0.1",
     "markdown-exit": "^1.3.0",
     "prettier": "^3.9.10",
     "release-it": "^21.1.1"

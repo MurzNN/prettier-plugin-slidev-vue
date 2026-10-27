@@ -201,10 +201,14 @@ code-example isolation, nested components, and stable repeated formatting.
 
 ## Releasing
 
-Run `pnpm release` from a clean checkout to select the next version, create and
-push a `vX.Y.Z` tag, and publish a GitHub Release. The command needs permission
-to push to the repository and a `GITHUB_TOKEN` with permission to create
-releases.
+Document user-facing changes under `[Unreleased]` in
+[CHANGELOG.md](./CHANGELOG.md) (Keep a Changelog). Then run `pnpm release` from
+a clean checkout to select the next version. release-it moves the Unreleased
+notes into the new version section, commits, creates and pushes a `vX.Y.Z` tag,
+and publishes a GitHub Release whose body comes from that changelog section.
+
+The command needs permission to push to the repository and a `GITHUB_TOKEN`
+with permission to create releases (for example `export GITHUB_TOKEN=$(gh auth token)`).
 
 Publishing a GitHub Release triggers
 [`.github/workflows/publish.yml`](./.github/workflows/publish.yml), which

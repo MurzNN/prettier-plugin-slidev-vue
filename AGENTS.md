@@ -52,3 +52,8 @@ and limitations.
   silently skip failed sorting, missing configured files, or lost Vue blocks.
 - Keep consumer UnoCSS configuration optional: the bundled Wind3 preset is the
   default, and custom presets are supplied by the consuming project.
+- Record user-facing changes under `[Unreleased]` in [CHANGELOG.md](./CHANGELOG.md)
+  before cutting a release. `pnpm release` uses `@release-it/keep-a-changelog`
+  to move that section into the new version and feed the GitHub Release body.
+  Set `GITHUB_TOKEN` (for example from `gh auth token`) so the GitHub Release
+  is created via the API instead of opening a browser link.
