@@ -15,10 +15,23 @@ It owns its sorting dependencies and does not load your project's ESLint config.
 
 ## Installation
 
-Until an npm release is published, install directly from GitHub:
+Install the package and Prettier as development dependencies:
 
 ```sh
-pnpm add -D prettier github:MurzNN/prettier-plugin-slidev-vue
+npm install --save-dev prettier prettier-plugin-slidev-vue
+```
+
+Or use pnpm or Yarn:
+
+```sh
+pnpm add --save-dev prettier prettier-plugin-slidev-vue
+yarn add --dev prettier prettier-plugin-slidev-vue
+```
+
+If you prefer, you can also install the latest version directly from GitHub:
+
+```sh
+pnpm add --save-dev prettier github:MurzNN/prettier-plugin-slidev-vue
 ```
 
 ## Configure Prettier
