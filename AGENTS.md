@@ -31,10 +31,12 @@ and limitations.
   restored flush with surrounding blank lines. Text gaps merge through inline
   HTML children (`span`, `input`, …) so list items are not shredded; islands
   that fall inside a tag (attribute lists) are skipped. Do not indent restored
-  islands by 4+ spaces (CommonMark indented code). Cover lists, Mermaid fences,
-  Markdown images in a div, inline-HTML lists, checkbox lists, and the
-  no-blank-line collapse case with
-  format tests; keep `playground/example.md` / `example.formatted.md` in sync.
+  islands by 4+ spaces (CommonMark indented code). Flush the opening tag before
+  and the closing tag after an island (Vue Prettier’s 2-space indent would make
+  CommonMark treat `  </v-clicks>` as list continuation). Cover lists, Mermaid
+  fences, Markdown images in a div, flush `v-clicks` wrappers, inline-HTML
+  lists, checkbox lists, and the no-blank-line collapse case with format tests;
+  keep `playground/example.md` / `example.formatted.md` in sync.
 - The default UnoCSS preset is in [uno.config.js](./uno.config.js). Tests use a
   separate empty-preset config at [test/fixtures/uno.config.js](./test/fixtures/uno.config.js).
   Custom config paths are resolved relative to the consumer's current working

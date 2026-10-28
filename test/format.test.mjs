@@ -146,8 +146,42 @@ test('preserves blank-line Markdown lists and headings inside Vue components', a
 `
   const result = await format(source, options)
   assert.match(result, /^## Sample region heading$/m)
-  assert.match(result, /<v-clicks>\n\n- Alpha placeholder item for Sample City\.\n- Beta placeholder item for Sample Harbor\.\n\n\s*<\/v-clicks>/)
+  assert.match(
+    result,
+    /<v-clicks>\n\n- Alpha placeholder item for Sample City\.\n- Beta placeholder item for Sample Harbor\.\n\n<\/v-clicks>/,
+  )
+  assert.doesNotMatch(result, /^ {2}<\/v-clicks>/m)
   assert.doesNotMatch(result, /- Alpha placeholder item for Sample City\. - Beta/)
+  assert.equal(await format(result, options), result)
+})
+
+test('keeps v-clicks flush when it wraps a blank-line Markdown list', async () => {
+  const source = `<div
+  class="iw-modal bg-white"
+>
+<v-clicks at="7">
+
+- Hello, is Bob there?
+- Sure, thank you, bye!
+
+</v-clicks>
+</div>
+`
+  const result = await format(source, options)
+  assert.equal(
+    result,
+    `<div class="iw-modal bg-white">
+<v-clicks at="7">
+
+- Hello, is Bob there?
+- Sure, thank you, bye!
+
+</v-clicks>
+</div>
+`,
+  )
+  assert.doesNotMatch(result, /^ {2}<v-clicks/m)
+  assert.doesNotMatch(result, /^ {2}<\/v-clicks>/m)
   assert.equal(await format(result, options), result)
 })
 

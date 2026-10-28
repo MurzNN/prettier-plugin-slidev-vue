@@ -451,6 +451,18 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
       if (!/\n\n$/.test(before)) before += '\n'
       if (!after.startsWith('\n')) after = `\n${after}`
       if (!/^\n\n/.test(after)) after = `\n${after}`
+      // Vue Prettier indents nested tags, but CommonMark treats a 1–3 space
+      // indent after a list as list continuation — so `  </v-clicks>` is
+      // absorbed into the last <li> and Vue reports a missing end tag. Flush
+      // the tags that border the island.
+      before = before.replace(
+        /[ \t]{1,3}(<[A-Za-z][\w:.-]*\b[^>\n]*>)\n\n$/,
+        '$1\n\n',
+      )
+      after = after.replace(
+        /^(\n+)[ \t]{1,3}(<\/[A-Za-z][\w:.-]*>)/,
+        '$1$2',
+      )
       content = before + formattedIsland + after
     }
 

@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dedent indented Markdown islands (lists whose AST starts at `-` while later
   lines still carry the Vue container indent) so Vue formatting cannot nest or
   reflow them into one wrapped paragraph
+- Flush Vue tags that border a blank-line Markdown island (e.g. `<v-clicks>` /
+  `</v-clicks>`) so a 1–3 space indent cannot be absorbed as CommonMark list
+  continuation and break Slidev with “Element is missing end tag”
 
 ### Documentation
 

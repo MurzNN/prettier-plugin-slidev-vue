@@ -70,7 +70,8 @@ Hide card
   Markdown heading and list into wrapped HTML text.
   After format: heading + list stay Markdown; nested <p v-click> stay Vue.
   Blank lines after tags are required (Slidev ends the HTML block there).
-  Nested tags use 2-space indent so CommonMark does not treat them as code.
+  Tags that wrap a blank-line Markdown list are flushed on format so CommonMark
+  does not absorb `</v-clicks>` into the last list item.
 -->
 
 <div class="flex flex-col gap-4">
