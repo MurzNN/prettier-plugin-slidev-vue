@@ -77,6 +77,11 @@ not globally alphabetical order).
 - Sorts UnoCSS classes and attributify utilities using UnoCSS's ESLint rules.
 - Masks fenced and inline code during Vue extraction so example tags do not
 consume actual components. Prettier may still format fenced code normally.
+- Protects **blank-line Markdown islands** inside components (lists, headings,
+  fences, paragraphs, images, …) so Vue formatting cannot collapse them into
+  one line with the surrounding tag (e.g. keep `![](…)` inside a `<div>`).
+  This matches Slidev’s HTML-block rule: a blank line after a tag ends the HTML
+  block and reopens Markdown.
 
 For example, an opening tag nested under a block root is kept properly indented
 without a blank line before `>`:
@@ -125,13 +130,17 @@ configs and remaining sorting errors fail formatting rather than being ignored.
 The entry point is [index.js](./index.js):
 
 1. Delegate deck parsing, YAML, and notes to `prettier-plugin-slidev`.
-2. Parse each slide's Markdown to identify code examples.
+2. Parse each slide's Markdown to identify code examples and blank-line
+   Markdown islands (lists, headings, fences, …).
 3. Parse the body as a temporary Vue template, masking code examples without
- changing source offsets.
+   changing source offsets.
 4. Extract top-level Vue elements, including their nested components.
-5. Apply sorting rules to each extracted block and format it as Vue.
-6. Protect those blocks with unique comments while formatting the Markdown.
-7. Restore the formatted blocks.
+5. Clip islands to Vue text gaps that contain a blank line (so a loose
+   CommonMark list range cannot swallow the next tag).
+6. Protect those islands with placeholders, sort/format the Vue shell, then
+   restore islands flush with blank lines (stable on reformat).
+7. Protect the formatted Vue blocks with unique comments while formatting the
+   surrounding Markdown, then restore them.
 
 The ESLint `Linter` is reused across blocks. ESLint is an internal implementation
 detail, not a separate formatting pass over the Markdown file.
@@ -164,12 +173,43 @@ This plugin therefore:
 Nested inline tags inside an extracted block root are left as Prettier emits
 them; the parent block already protects them at runtime.
 
+## Blank-line Markdown inside components
+
+Slidev (via `@mdit-vue/plugin-component`) ends a block/custom HTML tag on a
+**blank line**. Content after that blank line is parsed as Markdown again
+until the next tag. Put lists, headings, and fences in that zone:
+
+````html
+<v-clicks>
+
+- Placeholder item one
+- Placeholder item two
+
+</v-clicks>
+
+<v-click at="1">
+
+```mermaid
+mindmap
+  root((Placeholder root))
+    Branch one
+```
+
+</v-click>
+````
+
+Without the blank lines, the same content stays inside the HTML block at
+runtime and is formatted as Vue text (which may wrap or collapse it). That is
+intentional: the plugin only preserves Markdown where Slidev would too.
+
+In Markdown zones, keep nested tags at 0–2 spaces of indent. Four spaces after
+a blank line is an indented code block in CommonMark.
+
 ## Limitations
 
 - This is not a React MDX formatter or a general Markdown-to-Vue compiler.
-- Vue elements are formatted as blocks. Complex inline component/Markdown
-combinations and Markdown nested inside Vue elements may follow Vue
-whitespace rules rather than Markdown rules.
+- Vue elements are formatted as blocks. Markdown inside a component is preserved
+only when blank lines create a Markdown zone (see above).
 - `embeddedLanguageFormatting: "off"` disables Slidev's embedded formatting,
 including this plugin's Vue formatting and sorting.
 - Other plugins that replace Slidev/Vue/Markdown printers may conflict. Start
@@ -197,7 +237,8 @@ npm pack --dry-run
 ```
 
 Tests cover multiline attributes, slide frontmatter, Vue directives, sorting,
-code-example isolation, nested components, and stable repeated formatting.
+code-example isolation, nested components, blank-line Markdown islands, and
+stable repeated formatting.
 
 ## Releasing
 

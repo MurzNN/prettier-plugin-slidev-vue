@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Protect blank-line Markdown islands (lists, headings, fences, paragraphs,
+  images, …) inside Vue components so Vue formatting cannot collapse them;
+  restore islands flush with blank lines for stable reformat (e.g. keep
+  `![](…)` on its own lines inside `<div>`, not `<div>![](…)</div>`)
+- Merge Vue text gaps through inline HTML (`span`, `input`, …) so list items are
+  not shredded; skip unsafe islands (lone `>`, false indented HTML “code”,
+  paragraphs that absorbed closing tags); fall back to plain Vue format if an
+  island pass leaves a broken shell
+- Dedent indented Markdown islands (lists whose AST starts at `-` while later
+  lines still carry the Vue container indent) so Vue formatting cannot nest or
+  reflow them into one wrapped paragraph
+
+### Documentation
+
+- Document Slidev blank-line Markdown zones inside components
+- Extend the playground example with list/heading/Mermaid island cases and
+  comments that contrast broken source vs fixed output
+
 ## [0.2.0] - 2026-10-27
 
 ### Fixed

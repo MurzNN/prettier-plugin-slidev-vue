@@ -7,6 +7,11 @@ transition:    slide-up
 
 This   paragraph has **placeholder** text and shows normal Markdown formatting.
 
+<!--
+  Source is messy: unsorted Vue attrs / UnoCSS classes and uneven indent.
+  After format: attrs and classes are sorted; the inner <div> is Vue-formatted.
+-->
+
 <v-click>
 
 <div
@@ -30,6 +35,12 @@ Dismiss
 
 #   A second slide
 
+<!--
+  Source is messy: nested Vue indentation and attribute order are inconsistent.
+  After format: indentation is normalized; attrs and UnoCSS classes are sorted.
+  There is no blank-line Markdown zone here — the whole tree is formatted as Vue.
+-->
+
 <article
 class="text-white p-6 bg-purple-600 rounded-xl shadow-lg"
 id="feature-card"
@@ -49,3 +60,66 @@ class="text-white px-4 py-2 bg-purple-800 rounded"
 Hide card
 </button>
 </article>
+
+---
+
+# Markdown islands inside components
+
+<!--
+  Without island protection, Vue formatting would collapse the blank-line
+  Markdown heading and list into wrapped HTML text.
+  After format: heading + list stay Markdown; nested <p v-click> stay Vue.
+  Blank lines after tags are required (Slidev ends the HTML block there).
+  Nested tags use 2-space indent so CommonMark does not treat them as code.
+-->
+
+<div class="flex flex-col gap-4">
+  <p>
+    Placeholder lead-in about building satellite sites from a shared template.
+  </p>
+
+## Sample region heading
+
+  <p v-click>
+    Choose a locality and a topic, register a domain, and the placeholder
+    satellite is ready.
+  </p>
+
+  <p v-click>Placeholder examples of generated sites:</p>
+
+  <v-clicks>
+
+- Alpha repair services for Sample City, Example State.
+- Beta appliances for Sample Harbor, Example Country.
+- Gamma parts and services for Sample Metro, Example Region.
+
+  </v-clicks>
+
+  <p v-click>And the same pattern for any other placeholder topic.</p>
+
+</div>
+
+---
+
+# Fenced diagram inside v-click
+
+<!--
+  Without island protection, Vue formatting would reflow the fence, destroy
+  Mermaid indentation, and wrap lines at printWidth.
+  After format: the fence structure is preserved, with blank lines around it
+  so Slidev (and reformat) keep a Markdown zone.
+-->
+
+<v-click at="1">
+
+```mermaid
+mindmap
+  root((Placeholder root))
+    Branch one
+      Leaf A
+      Leaf B
+    Branch two
+      Leaf C
+```
+
+</v-click>
