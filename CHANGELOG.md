@@ -3,6 +3,12 @@
 Each version below is generated from Conventional Commits by release-it.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2](https://github.com/MurzNN/prettier-plugin-slidev-vue/compare/v0.2.1...v0.2.2) (2026-11-06)
+
+### Fixed
+
+* keep long attribute-free inline tags on one line ([c6cd25e](https://github.com/MurzNN/prettier-plugin-slidev-vue/commit/c6cd25e06e8c2327db18313984b7bf137b970efb))
+
 ## [0.2.1] - 2026-10-28
 
 ### Fixed

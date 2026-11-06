@@ -1,6 +1,6 @@
 {
   "name": "prettier-plugin-slidev-vue",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Format Slidev Markdown and embedded Vue components, with Vue attribute and UnoCSS class sorting.",
   "license": "MIT",
   "author": "Alexey Korepov",
@@ -50,15 +50,47 @@
         "preset": {
           "name": "conventionalcommits",
           "types": [
-            { "type": "feat", "section": "Added" },
-            { "type": "fix", "section": "Fixed" },
-            { "type": "perf", "section": "Changed" },
-            { "type": "refactor", "section": "Changed" },
-            { "type": "docs", "section": "Documentation", "effect": "changelog" },
-            { "type": "chore", "section": "Chores", "effect": "hidden" },
-            { "type": "test", "section": "Tests", "effect": "hidden" },
-            { "type": "ci", "section": "CI", "effect": "hidden" },
-            { "type": "style", "section": "Style", "effect": "hidden" }
+            {
+              "type": "feat",
+              "section": "Added"
+            },
+            {
+              "type": "fix",
+              "section": "Fixed"
+            },
+            {
+              "type": "perf",
+              "section": "Changed"
+            },
+            {
+              "type": "refactor",
+              "section": "Changed"
+            },
+            {
+              "type": "docs",
+              "section": "Documentation",
+              "effect": "changelog"
+            },
+            {
+              "type": "chore",
+              "section": "Chores",
+              "effect": "hidden"
+            },
+            {
+              "type": "test",
+              "section": "Tests",
+              "effect": "hidden"
+            },
+            {
+              "type": "ci",
+              "section": "CI",
+              "effect": "hidden"
+            },
+            {
+              "type": "style",
+              "section": "Style",
+              "effect": "hidden"
+            }
           ]
         }
       }
