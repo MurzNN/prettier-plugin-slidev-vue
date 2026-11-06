@@ -18,10 +18,12 @@ and limitations.
   is formatted. Preserve source offsets when masking code examples or changing
   extraction; fenced and inline code must not be treated as live Vue markup.
 - After Vue formatting, `normalizeSlidevRoot` rewrites empty top-level CommonMark
-  inline HTML tags to self-closing form and rejects multiline inline tags that
-  still have content. Keep that list aligned with `@mdit-vue/plugin-component`'s
-  force-inline tags. Cover both behaviors with format tests that also render
-  through `markdown-exit` + `@mdit-vue/plugin-component` + `@comark/markdown-it`.
+  inline HTML tags to self-closing form, collapses attribute-free inline tags
+  with text content back onto one line, and rejects multiline inline tags that
+  still have attributes or child elements. Keep that list aligned with
+  `@mdit-vue/plugin-component`'s force-inline tags. Cover these behaviors with
+  format tests that also render through `markdown-exit` +
+  `@mdit-vue/plugin-component` + `@comark/markdown-it`.
   Rejection errors must be stored on the Prettier options object and rethrown
   from `print`, because Prettier swallows `embed` failures unless
   `PRETTIER_DEBUG` is set.
@@ -64,8 +66,8 @@ and limitations.
   silently skip failed sorting, missing configured files, or lost Vue blocks.
 - Keep consumer UnoCSS configuration optional: the bundled Wind3 preset is the
   default, and custom presets are supplied by the consuming project.
-- Record user-facing changes under `[Unreleased]` in [CHANGELOG.md](./CHANGELOG.md)
-  before cutting a release. `pnpm release` uses `@release-it/keep-a-changelog`
-  to move that section into the new version and feed the GitHub Release body.
+- Do not edit [CHANGELOG.md](./CHANGELOG.md). `pnpm release` uses release-it to
+  generate the next version section from Conventional Commits. Write commit
+  subjects as `fix:`, `feat:`, and the other Conventional Commits types.
   Set `GITHUB_TOKEN` (for example from `gh auth token`) so the GitHub Release
   is created via the API instead of opening a browser link.

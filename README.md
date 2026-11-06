@@ -165,10 +165,14 @@ This plugin therefore:
 
 - Rewrites **empty** top-level inline HTML tags to self-closing (`/>`), which
   Slidev still treats as raw HTML after multiline formatting.
+- Collapses a top-level inline tag that has no attributes back onto one line
+  when Vue Prettier would break `>` onto the next line (long text inside the
+  temporary template wrapper). The single line stays raw HTML in Slidev.
 - Fails formatting when a top-level inline HTML tag has real content and a
-  multiline opening tag (Prettier otherwise swallows embed errors, so the
-  plugin rethrows during print). Nest it under a block tag (`div`), keep the
-  opening tag on one line, or use a Vue component / block HTML tag instead.
+  multiline opening tag that carries attributes or child elements (Prettier
+  otherwise swallows embed errors, so the plugin rethrows during print). Nest
+  it under a block tag (`div`), keep the opening tag on one line, or use a
+  Vue component / block HTML tag instead.
 
 Nested inline tags inside an extracted block root are left as Prettier emits
 them; the parent block already protects them at runtime.
@@ -242,11 +246,19 @@ stable repeated formatting.
 
 ## Releasing
 
-Document user-facing changes under `[Unreleased]` in
-[CHANGELOG.md](./CHANGELOG.md) (Keep a Changelog). Then run `pnpm release` from
-a clean checkout to select the next version. release-it moves the Unreleased
-notes into the new version section, commits, creates and pushes a `vX.Y.Z` tag,
-and publishes a GitHub Release whose body comes from that changelog section.
+Do not edit [CHANGELOG.md](./CHANGELOG.md). Commit subjects follow
+[Conventional Commits](https://www.conventionalcommits.org/) (`fix:`, `feat:`,
+and so on). From a clean checkout, run:
+
+```sh
+pnpm release
+```
+
+release-it reads the commits since the last tag, writes the next changelog
+section from those commits, bumps the package version, commits, pushes a
+`vX.Y.Z` tag, and publishes a GitHub Release whose body is that section. Pass
+`patch`, `minor`, or `major` to override the recommended bump
+(`pnpm release -- patch`).
 
 The command needs permission to push to the repository and a `GITHUB_TOKEN`
 with permission to create releases (for example `export GITHUB_TOKEN=$(gh auth token)`).

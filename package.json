@@ -44,10 +44,23 @@
       "publish": false
     },
     "plugins": {
-      "@release-it/keep-a-changelog": {
-        "filename": "CHANGELOG.md",
-        "addUnreleased": true,
-        "strictLatest": true
+      "@release-it/conventional-changelog": {
+        "infile": "CHANGELOG.md",
+        "header": "# Changelog\n\nEach version below is generated from Conventional Commits by release-it.\nThis project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).",
+        "preset": {
+          "name": "conventionalcommits",
+          "types": [
+            { "type": "feat", "section": "Added" },
+            { "type": "fix", "section": "Fixed" },
+            { "type": "perf", "section": "Changed" },
+            { "type": "refactor", "section": "Changed" },
+            { "type": "docs", "section": "Documentation", "effect": "changelog" },
+            { "type": "chore", "section": "Chores", "effect": "hidden" },
+            { "type": "test", "section": "Tests", "effect": "hidden" },
+            { "type": "ci", "section": "CI", "effect": "hidden" },
+            { "type": "style", "section": "Style", "effect": "hidden" }
+          ]
+        }
       }
     }
   },
@@ -72,7 +85,7 @@
   "devDependencies": {
     "@comark/markdown-it": "^0.3.4",
     "@mdit-vue/plugin-component": "^3.0.2",
-    "@release-it/keep-a-changelog": "^8.0.1",
+    "@release-it/conventional-changelog": "^12.0.2",
     "markdown-exit": "^1.3.0",
     "prettier": "^3.9.10",
     "release-it": "^21.1.1"

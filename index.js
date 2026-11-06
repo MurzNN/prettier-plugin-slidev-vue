@@ -78,8 +78,36 @@ function isEmptyElement(element) {
 }
 
 /**
- * Make empty top-level inline HTML tags self-closing, and reject multiline
- * inline tags that still have content. Both shapes break under Slidev Markdown.
+ * Escape a string for use as a literal inside a RegExp.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Join an attribute-free inline element onto one line so Slidev still treats
+ * it as raw HTML. Vue Prettier breaks `>` onto the next line once the text
+ * exceeds printWidth inside the temporary `<template>` wrapper.
+ *
+ * @param {string} content Formatted element, including its tags.
+ * @param {string} rawName Original tag name.
+ * @returns {string}
+ */
+function flattenAttributeFreeInline(content, rawName) {
+  const name = escapeRegExp(rawName)
+  const flat = content.replace(/\s+/g, ' ').trim()
+  return flat
+    .replace(new RegExp(`^<${name}\\s*>`, 'i'), `<${rawName}>`)
+    .replace(new RegExp(`</${name}\\s*>$`, 'i'), `</${rawName}>`)
+}
+
+/**
+ * Make empty top-level inline HTML tags self-closing, keep attribute-free
+ * inline tags on one line, and reject multiline inline tags that still have
+ * attributes or child elements. Those shapes break under Slidev Markdown.
  *
  * @param {string} content Formatted Vue block restored into the slide body.
  * @returns {string}
@@ -103,6 +131,11 @@ function normalizeSlidevRoot(content) {
   }
 
   if (multilineOpen) {
+    const openCollapsed = openTag.replace(/\s+/g, '')
+    const attributeFree = new RegExp(`^<${escapeRegExp(root.rawName)}>$`, 'i').test(openCollapsed)
+    const textOnly = !root.children.some((child) => child.type === 'VElement')
+    if (attributeFree && textOnly) return flattenAttributeFreeInline(content, root.rawName)
+
     throw new Error(
       `Slidev Markdown cannot keep a multiline <${root.rawName}> as raw HTML. `
       + 'Keep the opening tag on one line, nest it under a block tag (div), '
@@ -488,6 +521,8 @@ const formatError = new WeakMap()
  *
  * Empty top-level inline HTML tags (span, button, …) are rewritten as
  * self-closing so Slidev still treats them as raw HTML after format-on-save.
+ * Attribute-free inline tags whose text exceeds printWidth are joined back
+ * onto one line; a multiline opening tag with attributes still fails.
  *
  * @param {string} source One slide's body, excluding frontmatter.
  * @param {import('prettier').ParserOptions & { slidevVueUnoConfig?: string }} options

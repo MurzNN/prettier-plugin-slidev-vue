@@ -90,6 +90,16 @@ test('keeps empty block tags and nested empty spans unchanged', async () => {
   assertSlidevRawHtml(await renderSlidev(nested))
 })
 
+test('keeps a long attribute-free inline tag on one line', async () => {
+  const source = '<i>Actually, no other methods can provide free leads like iWant, but we still try to compare.</i>\n'
+  const result = await format(source, options)
+  assert.equal(result, source)
+  assert.equal(await format(result, options), result)
+  const html = await renderSlidev(result)
+  assertSlidevRawHtml(html, 'i')
+  assert.match(html, /<i>Actually, no other methods/)
+})
+
 test('rejects top-level multiline inline tags that still have content', async () => {
   const source = `<span
   v-click="1"
