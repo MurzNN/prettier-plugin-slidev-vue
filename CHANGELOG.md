@@ -3,6 +3,12 @@
 Each version below is generated from Conventional Commits by release-it.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3](https://github.com/MurzNN/prettier-plugin-slidev-vue/compare/v0.2.2...v0.2.3) (2026-11-07)
+
+### Fixed
+
+* stop formatting from copying the end of a Slidev deck ([5089017](https://github.com/MurzNN/prettier-plugin-slidev-vue/commit/50890179ee66797ce16a46ae50087f4baffb81d9))
+
 ## [0.2.2](https://github.com/MurzNN/prettier-plugin-slidev-vue/compare/v0.2.1...v0.2.2) (2026-11-06)
 
 ### Fixed
