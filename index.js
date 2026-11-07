@@ -374,12 +374,9 @@ async function formatVueSlicePlain(slice, options) {
   if (sorted.messages.length) {
     throw new Error(sorted.messages.map((message) => message.message).join('\n'))
   }
-  const formatted = await format(sorted.output, {
-    ...options,
-    parser: 'vue',
-  })
+  const formatted = await format(sorted.output, nestedFormatOptions(options, 'vue'))
   const lineEnding = formatted.match(/\r\n?|\n/)?.[0] ?? '\n'
-  const lines = formatted.trimEnd().split(/\r\n?|\n/)
+  const lines = splitLines(formatted)
   if (lines[0] !== '<template>' || lines.at(-1) !== '</template>') {
     throw new Error('Prettier did not preserve the temporary Vue template wrapper')
   }
@@ -448,12 +445,9 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
       throw new Error(sorted.messages.map((message) => message.message).join('\n'))
     }
 
-    const formatted = await format(sorted.output, {
-      ...options,
-      parser: 'vue',
-    })
+    const formatted = await format(sorted.output, nestedFormatOptions(options, 'vue'))
     const lineEnding = formatted.match(/\r\n?|\n/)?.[0] ?? '\n'
-    const lines = formatted.trimEnd().split(/\r\n?|\n/)
+    const lines = splitLines(formatted)
     if (lines[0] !== '<template>' || lines.at(-1) !== '</template>') {
       throw new Error('Prettier did not preserve the temporary Vue template wrapper')
     }
@@ -464,10 +458,7 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
       .trimEnd()
 
     for (const { marker, raw } of islands.toReversed()) {
-      const formattedIsland = (await format(raw, {
-        ...options,
-        parser: 'markdown',
-      })).trimEnd()
+      const formattedIsland = (await format(raw, nestedFormatOptions(options, 'markdown'))).trimEnd()
       const index = content.indexOf(marker)
       if (index === -1) {
         throw new Error(`Slidev formatting lost Markdown island ${marker}`)
@@ -509,6 +500,91 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
 
 /** Prettier swallows embed errors unless PRETTIER_DEBUG is set; rethrow from print. */
 const formatError = new WeakMap()
+
+/**
+ * Option names that are safe to forward into a nested Prettier call.
+ * Editor offsets (`originalText`, `rangeStart`, `rangeEnd`, `cursorOffset`)
+ * belong to the whole deck. Nested formats run on one slide or one Vue block.
+ */
+const NESTED_OPTION_KEYS = [
+  'printWidth',
+  'tabWidth',
+  'useTabs',
+  'proseWrap',
+  'singleQuote',
+  'bracketSameLine',
+  'singleAttributePerLine',
+  'htmlWhitespaceSensitivity',
+  'vueIndentScriptAndStyle',
+  'embeddedLanguageFormatting',
+  'filepath',
+  'plugins',
+  'slidevVueUnoConfig',
+]
+
+/**
+ * Build options for formatting a fragment of a slide.
+ * Fragments stay on LF; the outer Slidev print applies the file end-of-line.
+ *
+ * @param {object} options Resolved options from the deck format.
+ * @param {string} parser Prettier parser for the fragment.
+ */
+function nestedFormatOptions(options, parser) {
+  /** @type {Record<string, unknown>} */
+  const nested = { parser, endOfLine: 'lf' }
+  for (const key of NESTED_OPTION_KEYS) {
+    if (options[key] !== undefined) nested[key] = options[key]
+  }
+  return nested
+}
+
+/**
+ * Split text into lines. CRLF and CR are one break, and the CR is not kept
+ * on the line. A leftover CR plus the outer printer's newline is saved as
+ * CR+CRLF, which shows up as a blank line between every line.
+ *
+ * @param {string} text
+ * @returns {string[]}
+ */
+function splitLines(text) {
+  return text.trimEnd().split(/\r\n?|\n/)
+}
+
+/**
+ * Character offsets of the start of each line, including a trailing empty
+ * line when the text ends with a newline. Slide ranges from `@slidev/parser`
+ * are line indexes; Prettier's cursor and range APIs need character offsets.
+ *
+ * @param {string} text
+ * @returns {number[]}
+ */
+function lineStartOffsets(text) {
+  const offsets = [0]
+  for (let index = 0; index < text.length; index++) {
+    if (text[index] === '\n') offsets.push(index + 1)
+  }
+  return offsets
+}
+
+/**
+ * Record `[start, end)` character offsets for the deck and each slide.
+ * Without these, `locStart` / `locEnd` throw on slide nodes and a cursor
+ * format (format-on-save) aborts.
+ *
+ * @param {{ raw?: string, range?: [number, number], slides?: Array<{ info?: { start?: number, end?: number }, range?: [number, number] }> }} ast
+ * @param {string} text
+ */
+function attachSlideRanges(ast, text) {
+  const offsets = lineStartOffsets(text)
+  ast.range = [0, text.length]
+  for (const slide of ast.slides ?? []) {
+    const startLine = slide.info?.start ?? 0
+    const endLine = slide.info?.end ?? offsets.length
+    const start = offsets[startLine] ?? 0
+    const end = endLine >= offsets.length ? text.length : offsets[endLine]
+    slide.range = [start, end]
+  }
+}
 
 /**
  * Sort and format Vue blocks independently of Markdown, then restore them.
@@ -567,7 +643,7 @@ async function formatBody(source, options) {
     protectedSource = protectedSource.slice(0, start) + marker + protectedSource.slice(end)
   }
 
-  let result = await format(protectedSource, { ...options, parser: 'markdown' })
+  let result = await format(protectedSource, nestedFormatOptions(options, 'markdown'))
   for (const { marker, content } of blocks) {
     if (!result.includes(marker)) throw new Error(`Slidev formatting lost Vue block ${marker}`)
     result = result.replace(marker, () => content)
@@ -578,6 +654,32 @@ async function formatBody(source, options) {
 /** @type {import('prettier').Plugin} */
 const plugin = {
   ...slidev,
+  parsers: {
+    ...slidev.parsers,
+    slidev: {
+      ...slidev.parsers.slidev,
+      async parse(text, options) {
+        const ast = await slidev.parsers.slidev.parse(text, options)
+        attachSlideRanges(ast, text)
+        return ast
+      },
+      /**
+       * @param {{ range?: [number, number], type?: string }} node
+       */
+      locStart(node) {
+        if (node?.range) return node.range[0]
+        return 0
+      },
+      /**
+       * @param {{ range?: [number, number], type?: string, raw?: string }} node
+       */
+      locEnd(node) {
+        if (node?.range) return node.range[1]
+        if (node?.type === 'markdown') return node.raw?.length ?? 0
+        return 0
+      },
+    },
+  },
   options: {
     ...slidev.options,
     slidevVueUnoConfig: {
@@ -604,7 +706,7 @@ const plugin = {
           if (embeddedOptions.parser !== 'markdown') return textToDoc(text, embeddedOptions)
           try {
             const formatted = await formatBody(text, options)
-            return doc.builders.join(doc.builders.hardline, formatted.trimEnd().split('\n'))
+            return doc.builders.join(doc.builders.hardline, splitLines(formatted))
           }
           catch (error) {
             // Embed failures are swallowed by Prettier; fail the print pass instead.

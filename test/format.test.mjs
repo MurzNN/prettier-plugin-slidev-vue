@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { test } from 'node:test'
-import { format } from 'prettier'
+import { format, formatWithCursor } from 'prettier'
 import plugin from '../index.js'
 import { fileURLToPath } from 'node:url'
 import { createMarkdownExit } from 'markdown-exit'
@@ -303,6 +303,30 @@ test('still Vue-formats component bodies without a blank-line Markdown zone', as
   assert.match(result, /<v-clicks> - Alpha placeholder item\. - Beta placeholder item\. <\/v-clicks>/)
   assert.doesNotMatch(result, /<v-clicks>\n\n- Alpha/)
   assert.equal(await format(result, options), result)
+})
+
+test('does not append another copy of the deck tail', async () => {
+  const source = `Let’s just allow them to do this in a more convenient way for both sides!
+
+---
+
+# THE END!
+`
+  const result = await format(source, options)
+  assert.equal(result, source)
+  assert.equal((result.match(/# THE END!/g) ?? []).length, 1)
+  assert.equal(result.indexOf('sides!'), result.lastIndexOf('sides!'))
+  assert.equal(await format(result, options), result)
+
+  const withCursor = await formatWithCursor(source, { ...options, cursorOffset: source.length - 2 })
+  assert.equal(withCursor.formatted, source)
+})
+
+test('keeps CRLF line endings without a carriage return on each line', async () => {
+  const source = '# Title\r\n\r\nHello sides!\r\n\r\n---\r\n\r\n# THE END!\r\n'
+  const result = await format(source, { ...options, endOfLine: 'crlf' })
+  assert.equal(result, source)
+  assert.equal(await format(result, { ...options, endOfLine: 'crlf' }), result)
 })
 
 test('formats the mixed Slidev and Vue example from its source file', async () => {
