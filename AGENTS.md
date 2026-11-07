@@ -67,7 +67,9 @@ and limitations.
 - Keep consumer UnoCSS configuration optional: the bundled Wind3 preset is the
   default, and custom presets are supplied by the consuming project.
 - Do not edit [CHANGELOG.md](./CHANGELOG.md). `pnpm release` uses release-it to
-  generate the next version section from Conventional Commits. Write commit
+  generate the next version section from Conventional Commits, push the tag,
+  create the GitHub Release, and publish the package to npm. Write commit
   subjects as `fix:`, `feat:`, and the other Conventional Commits types.
   Set `GITHUB_TOKEN` (for example from `gh auth token`) so the GitHub Release
-  is created via the API instead of opening a browser link.
+  is created via the API instead of opening a browser link. Be logged in to
+  npm (`npm whoami`) before releasing.
