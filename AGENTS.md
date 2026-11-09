@@ -71,8 +71,9 @@ and limitations.
   default, and custom presets are supplied by the consuming project.
 - Do not edit [CHANGELOG.md](./CHANGELOG.md). `pnpm release` uses release-it to
   generate the next version section from Conventional Commits, push the tag,
-  create the GitHub Release, and publish the package to npm. Write commit
-  subjects as `fix:`, `feat:`, and the other Conventional Commits types.
-  Set `GITHUB_TOKEN` (for example from `gh auth token`) so the GitHub Release
-  is created via the API instead of opening a browser link. Be logged in to
-  npm (`npm whoami`) before releasing.
+  and create the GitHub Release. Write commit subjects as `fix:`, `feat:`, and
+  the other Conventional Commits types. Set `GITHUB_TOKEN` (for example from
+  `gh auth token`) so the GitHub Release is created via the API instead of
+  opening a browser link. npm publish is not done by release-it: the Publish
+  workflow runs `npm publish` with trusted publishing when that release is
+  published, so no npm token is required. Leave `npm.publish` false.
