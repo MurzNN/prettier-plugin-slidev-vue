@@ -3,6 +3,12 @@
 Each version below is generated from Conventional Commits by release-it.
 This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4](https://github.com/MurzNN/prettier-plugin-slidev-vue/compare/v0.2.3...v0.2.4) (2026-11-09)
+
+### Fixed
+
+* print v-drag positions the way Slidev writes them ([0f5f09f](https://github.com/MurzNN/prettier-plugin-slidev-vue/commit/0f5f09fffd7de52917650f22570d938f5e2cf5bf))
+
 ## [0.2.3](https://github.com/MurzNN/prettier-plugin-slidev-vue/compare/v0.2.2...v0.2.3) (2026-11-07)
 
 ### Fixed
