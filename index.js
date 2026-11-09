@@ -348,6 +348,19 @@ function dedentIslandText(text) {
 }
 
 /**
+ * Print `v-drag` the way Slidev writes it: `[495,456,28,NaN]`.
+ * Prettier's Vue printer puts a space after every comma in that array.
+ *
+ * @param {string} content Formatted Vue block.
+ * @returns {string}
+ */
+function compactVDrag(content) {
+  return content.replace(/v-drag=(["'])(\[[\s\S]*?\])\1/g, (full, quote, value) => {
+    return `v-drag=${quote}${value.replace(/\s+/g, '')}${quote}`
+  })
+}
+
+/**
  * Sort + Prettier-format a Vue slice with no Markdown island protection.
  *
  * @param {string} slice
@@ -381,12 +394,12 @@ async function formatVueSlicePlain(slice, options) {
     throw new Error('Prettier did not preserve the temporary Vue template wrapper')
   }
   const indent = options.useTabs ? '\t' : ' '.repeat(options.tabWidth ?? 2)
-  return normalizeSlidevRoot(
+  return compactVDrag(normalizeSlidevRoot(
     lines.slice(1, -1)
       .map((line) => line.startsWith(indent) ? line.slice(indent.length) : line)
       .join(lineEnding)
       .trimEnd(),
-  )
+  ))
 }
 
 async function formatVueSlice(slice, sliceStart, islandRanges, options) {
@@ -490,7 +503,7 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
       content = before + formattedIsland + after
     }
 
-    return normalizeSlidevRoot(content)
+    return compactVDrag(normalizeSlidevRoot(content))
   }
   catch {
     // Ambiguous Markdown/HTML splits can leave a broken Vue shell; fall back.

@@ -17,6 +17,9 @@ and limitations.
   formatted by Prettier's Vue parser, and temporarily protected while Markdown
   is formatted. Preserve source offsets when masking code examples or changing
   extraction; fenced and inline code must not be treated as live Vue markup.
+- After Vue formatting, `compactVDrag` removes spaces inside `v-drag="[...]"` so
+  the value matches what Slidev writes (`[495,456,28,NaN]`). Other arrays keep
+  Prettier's spacing.
 - After Vue formatting, `normalizeSlidevRoot` rewrites empty top-level CommonMark
   inline HTML tags to self-closing form, collapses attribute-free inline tags
   with text content back onto one line, and rejects multiline inline tags that

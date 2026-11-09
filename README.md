@@ -72,6 +72,8 @@ formatting and sorting; no ESLint extension or wrapper command is required.
 - Formats surrounding Markdown through Prettier's Markdown parser.
 - Formats extracted HTML/Vue blocks through Prettier's Vue parser, including
 indentation for nested component trees.
+- Prints `v-drag` positions without spaces (`[495,456,28,NaN]`), matching the
+  value Slidev writes when an element is moved.
 - Sorts component attributes using `vue/attributes-order` (Vue's grouped order,
 not globally alphabetical order).
 - Sorts UnoCSS classes and attributify utilities using UnoCSS's ESLint rules.

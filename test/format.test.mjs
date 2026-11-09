@@ -44,6 +44,25 @@ test('indents nested Vue elements while keeping the extracted root unindented', 
   assert.equal(await format(result, options), result)
 })
 
+test('prints v-drag positions without spaces, matching Slidev', async () => {
+  const source = [
+    '<div v-drag="[495, 456, 28, NaN]" class="iw-bubble">',
+    'Text',
+    '</div>',
+    '',
+    '<MessengerFrame v-click="9" v-drag="[555, 92, 384, 435]">',
+    'Hello',
+    '</MessengerFrame>',
+    '',
+  ].join('\n')
+  const result = await format(source, options)
+  assert.match(result, /v-drag="\[495,456,28,NaN\]"/)
+  assert.match(result, /v-drag="\[555,92,384,435\]"/)
+  assert.doesNotMatch(result, /v-drag="\[[^\]]*, /)
+  assert.equal(await format(result, options), result)
+  assert.equal(await format(result.replace('[495,456,28,NaN]', '[495, 456, 28, NaN]'), options), result)
+})
+
 test('formats Markdown and frontmatter while retaining Vue directive syntax', async () => {
   const source = '---\ntitle:    Test\n---\n\n#   Heading\n\n<PointingBubble\n  v-click.up="15"\n  :target="{ x: 340, y: 390 }"\n  placement="manual"\n>\nText\n</PointingBubble>\n\n---\ntransition:    slide-up\n---\n\n# Second\n'
   const result = await format(source, options)
