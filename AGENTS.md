@@ -21,15 +21,20 @@ and limitations.
   the value matches what Slidev writes (`[495,456,28,NaN]`). Other arrays keep
   Prettier's spacing.
 - After Vue formatting, `normalizeSlidevRoot` rewrites empty top-level CommonMark
-  inline HTML tags to self-closing form, collapses attribute-free inline tags
-  with text content back onto one line, and rejects multiline inline tags that
-  still have attributes or child elements. Keep that list aligned with
-  `@mdit-vue/plugin-component`'s force-inline tags. Cover these behaviors with
-  format tests that also render through `markdown-exit` +
-  `@mdit-vue/plugin-component` + `@comark/markdown-it`.
+  inline HTML tags to self-closing form, and collapses every other top-level
+  inline tag (with or without attributes) back onto one line so Slidev's
+  same-line HTML rule keeps it as raw HTML, including spans inside headings.
+  A blank line in the original tag is a Markdown island: formatting fails with
+  `file:line:column` (`error.loc` plus the message). The line is the deck line
+  of the opening tag. The slide body is located in the original file because
+  `@slidev/parser` 0.47 trims `slide.content` and does not set `contentStart`.
+  Keep that tag list aligned with `@mdit-vue/plugin-component`'s force-inline
+  tags. Cover these behaviors with format tests that also render through
+  `markdown-exit` + `@mdit-vue/plugin-component` + `@comark/markdown-it`.
   Rejection errors must be stored on the Prettier options object and rethrown
   from `print`, because Prettier swallows `embed` failures unless
-  `PRETTIER_DEBUG` is set.
+  `PRETTIER_DEBUG` is set. The island fallback must rethrow
+  `error.slidevInlineHtml` instead of formatting the slice again.
 - Blank-line Markdown islands inside Vue components (lists, headings, fences,
   paragraphs, …) are collected from the Markdown AST, clipped to Vue text gaps
   that contain a blank line, protected while the Vue shell is formatted, then

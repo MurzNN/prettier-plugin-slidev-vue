@@ -167,14 +167,16 @@ This plugin therefore:
 
 - Rewrites **empty** top-level inline HTML tags to self-closing (`/>`), which
   Slidev still treats as raw HTML after multiline formatting.
-- Collapses a top-level inline tag that has no attributes back onto one line
-  when Vue Prettier would break `>` onto the next line (long text inside the
-  temporary template wrapper). The single line stays raw HTML in Slidev.
-- Fails formatting when a top-level inline HTML tag has real content and a
-  multiline opening tag that carries attributes or child elements (Prettier
-  otherwise swallows embed errors, so the plugin rethrows during print). Nest
-  it under a block tag (`div`), keep the opening tag on one line, or use a
-  Vue component / block HTML tag instead.
+- Collapses a top-level inline tag back onto one line when Vue Prettier would
+  break `>` onto the next line (long text or attributes inside the temporary
+  template wrapper). That includes a `<span>` inside a heading. The single
+  line stays raw HTML in Slidev.
+- Fails formatting when that inline tag also contains a blank-line Markdown
+  island (a list, fence, or paragraph), because the island and the same-line
+  HTML rule cannot both be kept. The error is `file:line:column` of the
+  opening tag (Prettier otherwise swallows embed errors, so the plugin
+  rethrows during print). Nest it under a block tag (`div`), or use a Vue
+  component / block HTML tag instead.
 
 Nested inline tags inside an extracted block root are left as Prettier emits
 them; the parent block already protects them at runtime.

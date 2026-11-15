@@ -105,14 +105,165 @@ function flattenAttributeFreeInline(content, rawName) {
 }
 
 /**
- * Make empty top-level inline HTML tags self-closing, keep attribute-free
- * inline tags on one line, and reject multiline inline tags that still have
- * attributes or child elements. Those shapes break under Slidev Markdown.
+ * Collapse whitespace in a tag without touching quoted attribute values, and
+ * without leaving a space before `>` or `/>`. Slidev only keeps a force-inline
+ * tag (`span`, `i`, …) as raw HTML when the whole element stays on one line.
  *
- * @param {string} content Formatted Vue block restored into the slide body.
+ * @param {string} tag Opening or closing tag, possibly wrapped by Vue Prettier.
  * @returns {string}
  */
-function normalizeSlidevRoot(content) {
+function collapseTagWhitespace(tag) {
+  let out = ''
+  /** @type {string | null} */
+  let quote = null
+  let pendingSpace = false
+  for (const ch of tag) {
+    if (quote) {
+      out += ch
+      if (ch === quote) quote = null
+      continue
+    }
+    if (ch === '"' || ch === "'") {
+      if (pendingSpace) {
+        out += ' '
+        pendingSpace = false
+      }
+      quote = ch
+      out += ch
+      continue
+    }
+    if (ch === '<' || ch === '>' || ch === '/') {
+      pendingSpace = false
+      out += ch
+      continue
+    }
+    if (/\s/.test(ch)) {
+      pendingSpace = true
+      continue
+    }
+    if (pendingSpace) {
+      out += ' '
+      pendingSpace = false
+    }
+    out += ch
+  }
+  return out
+}
+
+/**
+ * Print an inline element on one line, including nested inline children.
+ * Text indentation that Vue Prettier inserted is collapsed. Quoted attribute
+ * values are left as formatted.
+ *
+ * @param {string} content Formatted Vue fragment that contains `root`.
+ * @param {import('vue-eslint-parser').AST.VElement} root
+ * @returns {string}
+ */
+function flattenInlineTree(content, root) {
+  const openStart = root.startTag.range[0] - prefix.length
+  const openEnd = root.startTag.range[1] - prefix.length
+  const open = collapseTagWhitespace(content.slice(openStart, openEnd))
+  if (open.endsWith('/>') || isEmptyElement(root)) return open
+  let inner = ''
+  for (const child of root.children) {
+    if (child.type === 'VText') inner += child.value
+    else if (child.type === 'VElement') inner += flattenInlineTree(content, child)
+  }
+  inner = inner.replace(/\s+/g, ' ').trim()
+  return `${open}${inner}</${root.rawName}>`
+}
+
+/**
+ * 0-based file line where the embedded slide body begins.
+ * `@slidev/parser` 0.47 trims `slide.content` and does not set `contentStart`,
+ * so the line is found by locating that body inside the slide's line range.
+ * A parser that already reports `contentStart` is used when the lookup misses.
+ *
+ * @param {string | undefined} originalText Full deck text from Prettier.
+ * @param {{ start?: number, end?: number, content?: string, contentStart?: number, frontmatterRaw?: string } | null | undefined} info
+ * @returns {number}
+ */
+function contentStartLine(originalText, info) {
+  const slideStart = info?.start ?? 0
+  const reported = typeof info?.contentStart === 'number' ? info.contentStart : slideStart
+  if (!originalText || typeof info?.content !== 'string' || info.content.length === 0) return reported
+  const lines = originalText.replace(/\r\n/g, '\n').split('\n')
+  const end = info.end ?? lines.length
+  const slideLines = lines.slice(slideStart, end)
+  let searchFrom = 0
+  if (info.frontmatterRaw) {
+    const close = slideLines.findIndex((line, index) => index > 0 && line.trim() === '---')
+    if (close !== -1) searchFrom = close + 1
+  }
+  const tail = slideLines.slice(searchFrom).join('\n')
+  const at = tail.indexOf(info.content)
+  if (at === -1) return reported
+  const head = slideLines.slice(0, searchFrom).join('\n')
+  const prefix = head.length === 0 ? '' : `${head}\n`
+  return slideStart + (prefix + tail.slice(0, at)).split('\n').length - 1
+}
+
+/**
+ * 1-based file position of a character offset inside a slide body.
+ * `contentStart` is the 0-based file line where that body begins.
+ *
+ * @param {string} source Slide body passed to the Markdown embed.
+ * @param {number} offset Character offset into `source`.
+ * @param {number} contentStart 0-based file line of the first body line.
+ * @returns {{ line: number, column: number, excerpt: string }}
+ */
+function sourceLocation(source, offset, contentStart) {
+  const before = source.slice(0, offset)
+  const lineStart = before.lastIndexOf('\n') + 1
+  const lineEndIdx = source.indexOf('\n', offset)
+  const lineEnd = lineEndIdx === -1 ? source.length : lineEndIdx
+  const excerpt = source.slice(lineStart, lineEnd).trim()
+  return {
+    line: contentStart + before.split('\n').length,
+    column: offset - lineStart + 1,
+    excerpt: excerpt.length > 200 ? `${excerpt.slice(0, 197)}...` : excerpt,
+  }
+}
+
+/**
+ * Error for a top-level inline tag Slidev cannot keep. `error.slidevInlineHtml`
+ * is set so the Markdown-island fallback rethrows it instead of reformatting.
+ * `error.loc` is a Prettier-style source position.
+ *
+ * @param {string} rawName Tag name as written.
+ * @param {import('prettier').ParserOptions} options
+ * @param {{ line: number, column: number, excerpt?: string } | null} loc
+ * @returns {Error}
+ */
+function slidevInlineError(rawName, options, loc) {
+  const file = options.filepath || 'slide'
+  const at = loc ? `${file}:${loc.line}:${loc.column}` : file
+  const excerpt = loc?.excerpt ? `\n${loc.excerpt}\n` : ' '
+  const error = new Error(
+    `${at}: Slidev Markdown cannot keep a multiline <${rawName}> as raw HTML.`
+    + `${excerpt}Keep the opening tag on one line, nest it under a block tag (div), `
+    + 'or use a Vue component / block HTML tag instead.',
+  )
+  error.slidevInlineHtml = true
+  if (loc) error.loc = { start: { line: loc.line, column: loc.column } }
+  return error
+}
+
+/**
+ * Make empty top-level inline HTML tags self-closing, and keep every other
+ * top-level inline tag on one line so Slidev's same-line HTML rule still
+ * treats it as raw HTML (including inside headings and paragraphs).
+ * A blank line inside the original tag is a Markdown island, which cannot
+ * share that single line, so formatting fails with the source position.
+ *
+ * @param {string} content Formatted Vue block restored into the slide body.
+ * @param {string} original Vue block before formatting, used to detect Markdown islands.
+ * @param {import('prettier').ParserOptions} options Resolved Prettier options (`filepath`).
+ * @param {{ line: number, column: number, excerpt?: string } | null} [loc]
+ *   Source position of this block in the deck file.
+ * @returns {string}
+ */
+function normalizeSlidevRoot(content, original, options, loc = null) {
   const root = parseRootElement(content)
   if (!root) return content
 
@@ -135,12 +286,8 @@ function normalizeSlidevRoot(content) {
     const attributeFree = new RegExp(`^<${escapeRegExp(root.rawName)}>$`, 'i').test(openCollapsed)
     const textOnly = !root.children.some((child) => child.type === 'VElement')
     if (attributeFree && textOnly) return flattenAttributeFreeInline(content, root.rawName)
-
-    throw new Error(
-      `Slidev Markdown cannot keep a multiline <${root.rawName}> as raw HTML. `
-      + 'Keep the opening tag on one line, nest it under a block tag (div), '
-      + 'or use a Vue component / block HTML tag instead.',
-    )
+    if (hasBlankLine(original)) throw slidevInlineError(root.rawName, options, loc)
+    return flattenInlineTree(content, root)
   }
 
   return content
@@ -365,8 +512,10 @@ function compactVDrag(content) {
  *
  * @param {string} slice
  * @param {import('prettier').ParserOptions & { slidevVueUnoConfig?: string }} options
+ * @param {{ line: number, column: number, excerpt?: string } | null} [loc]
+ *   Source position of `slice` in the deck file.
  */
-async function formatVueSlicePlain(slice, options) {
+async function formatVueSlicePlain(slice, options, loc = null) {
   const sorted = linter.verifyAndFix(`${prefix}${slice}${suffix}`, {
     files: ['**/*.vue'],
     languageOptions: { parser: vueParser },
@@ -399,11 +548,21 @@ async function formatVueSlicePlain(slice, options) {
       .map((line) => line.startsWith(indent) ? line.slice(indent.length) : line)
       .join(lineEnding)
       .trimEnd(),
+    slice,
+    options,
+    loc,
   ))
 }
 
-async function formatVueSlice(slice, sliceStart, islandRanges, options) {
-  if (islandRanges.length === 0) return formatVueSlicePlain(slice, options)
+/**
+ * @param {string} slice
+ * @param {number} sliceStart
+ * @param {Array<[number, number, string]>} islandRanges
+ * @param {import('prettier').ParserOptions & { slidevVueUnoConfig?: string }} options
+ * @param {{ line: number, column: number, excerpt?: string } | null} [loc]
+ */
+async function formatVueSlice(slice, sliceStart, islandRanges, options, loc = null) {
+  if (islandRanges.length === 0) return formatVueSlicePlain(slice, options, loc)
 
   try {
     const localIslands = islandRanges
@@ -503,11 +662,12 @@ async function formatVueSlice(slice, sliceStart, islandRanges, options) {
       content = before + formattedIsland + after
     }
 
-    return compactVDrag(normalizeSlidevRoot(content))
+    return compactVDrag(normalizeSlidevRoot(content, slice, options, loc))
   }
-  catch {
+  catch (error) {
+    if (error?.slidevInlineHtml) throw error
     // Ambiguous Markdown/HTML splits can leave a broken Vue shell; fall back.
-    return formatVueSlicePlain(slice, options)
+    return formatVueSlicePlain(slice, options, loc)
   }
 }
 
@@ -611,14 +771,17 @@ function attachSlideRanges(ast, text) {
  * Empty top-level inline HTML tags (span, button, …) are rewritten as
  * self-closing so Slidev still treats them as raw HTML after format-on-save.
  * Attribute-free inline tags whose text exceeds printWidth are joined back
- * onto one line; a multiline opening tag with attributes still fails.
+ * onto one line. Attributed inline tags are joined the same way, so a heading
+ * such as `# Title <span class="long">word</span>` stays raw HTML. A blank
+ * line inside that tag still fails, and the error names the source line.
  *
  * @param {string} source One slide's body, excluding frontmatter.
  * @param {import('prettier').ParserOptions & { slidevVueUnoConfig?: string }} options
  *   Resolved Prettier options, including the optional consumer UnoCSS config.
+ * @param {number} [contentStart] 0-based file line where `source` begins.
  * @returns {Promise<string>} Formatted Markdown containing formatted Vue blocks.
  */
-async function formatBody(source, options) {
+async function formatBody(source, options, contentStart = 0) {
   const markdown = await parsers.markdown.parse(source, options)
   const codeRanges = collectCodeRanges(markdown)
   const islandRanges = collectMarkdownIslands(markdown)
@@ -651,6 +814,7 @@ async function formatBody(source, options) {
       start,
       clippedIslands,
       options,
+      sourceLocation(source, start, contentStart),
     )
     blocks.push({ marker, content })
     protectedSource = protectedSource.slice(0, start) + marker + protectedSource.slice(end)
@@ -718,7 +882,8 @@ const plugin = {
         return (textToDoc, ...args) => embed(async (text, embeddedOptions) => {
           if (embeddedOptions.parser !== 'markdown') return textToDoc(text, embeddedOptions)
           try {
-            const formatted = await formatBody(text, options)
+            const contentStart = contentStartLine(options.originalText, path.getNode()?.info)
+            const formatted = await formatBody(text, options, contentStart)
             return doc.builders.join(doc.builders.hardline, splitLines(formatted))
           }
           catch (error) {

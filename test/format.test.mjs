@@ -119,15 +119,58 @@ test('keeps a long attribute-free inline tag on one line', async () => {
   assert.match(html, /<i>Actually, no other methods/)
 })
 
-test('rejects top-level multiline inline tags that still have content', async () => {
+test('keeps a long attributed inline tag on one line', async () => {
   const source = `<span
   v-click="1"
   class="very-long-class-name-that-forces-wrapping foo bar baz qux"
 >in the messenger</span>
 `
+  const result = await format(source, { ...options, printWidth: 40 })
+  assert.equal(
+    result,
+    '<span v-click="1" class="very-long-class-name-that-forces-wrapping foo bar baz qux">in the messenger</span>\n',
+  )
+  assert.equal(await format(result, { ...options, printWidth: 40 }), result)
+  const html = await renderSlidev(result)
+  assertSlidevRawHtml(html)
+  assert.match(html, /<span[^>]*>in the messenger<\/span>/)
+})
+
+test('keeps inline spans inside a heading on one line', async () => {
+  const source = '# 1. <span v-click class="iw-positive iw-zoom-in font-bold">Optimal</span> User Scenario <span class="js-ml-friendly iw-positive" v-click="14">«Millennials-friendly»</span>\n'
+  const result = await format(source, options)
+  assert.match(result, /^# 1\. <span[^>]*>Optimal<\/span> User Scenario <span[^>]*>«Millennials-friendly»<\/span>\n$/)
+  assert.doesNotMatch(result, /\n.*<span/)
+  assert.equal(await format(result, options), result)
+  const html = await renderSlidev(result)
+  assertSlidevRawHtml(html)
+  assert.match(html, /<h1>1\. <span[^>]*>Optimal<\/span> User Scenario <span[^>]*>«Millennials-friendly»<\/span><\/h1>/)
+})
+
+test('reports the deck line when an inline tag contains a Markdown island', async () => {
+  const source = `---
+title: Test
+---
+
+# Title
+
+<span
+  class="very-long-class-name-that-forces-wrapping foo bar baz qux"
+>
+
+- Keep this list
+
+</span>
+`
   await assert.rejects(
     () => format(source, { ...options, printWidth: 40 }),
-    /Slidev Markdown cannot keep a multiline <span>/,
+    (error) => {
+      assert.match(error.message, /^slides\.md:7:1: Slidev Markdown cannot keep a multiline <span>/)
+      assert.match(error.message, /<span/)
+      assert.equal(error.loc.start.line, 7)
+      assert.equal(error.loc.start.column, 1)
+      return true
+    },
   )
 })
 
